@@ -4,8 +4,8 @@ import { doc, getDoc, collection, addDoc, Timestamp } from "firebase/firestore";
 
 export default function Confirmar() {
   const [evento, setEvento] = useState(null);
-  const [quantidade, setQuantidade] = useState(1);
-  const [pessoas, setPessoas] = useState([{ nome: "", telefone: "", idade: "" }]);
+  const [quantidade, setQuantidade] = useState(""); // agora pode ser vazio
+  const [pessoas, setPessoas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -23,13 +23,25 @@ export default function Confirmar() {
 
   // Atualiza a quantidade de pessoas e os campos
   const handleQuantidadeChange = (e) => {
-    const qtd = parseInt(e.target.value) || 1;
-    setQuantidade(qtd);
-    setPessoas(
-      Array(qtd)
-        .fill()
-        .map((_, i) => pessoas[i] || { nome: "", telefone: "", idade: "" })
-    );
+    const valor = e.target.value;
+
+    // Se o campo estiver vazio, deixa vazio
+    if (valor === "") {
+      setQuantidade("");
+      setPessoas([]);
+      return;
+    }
+
+    const qtd = parseInt(valor, 10);
+
+    if (!isNaN(qtd) && qtd > 0) {
+      setQuantidade(qtd);
+      setPessoas(
+        Array(qtd)
+          .fill()
+          .map((_, i) => pessoas[i] || { nome: "", telefone: "", idade: "" })
+      );
+    }
   };
 
   // Atualiza os dados de cada pessoa
@@ -42,6 +54,13 @@ export default function Confirmar() {
   // Salvar no Firestore
   const handleConfirmar = async (e) => {
     e.preventDefault();
+
+    // Garantir que tenha quantidade válida
+    if (!quantidade || quantidade <= 0) {
+      setMsg("❌ Informe a quantidade de pessoas.");
+      return;
+    }
+
     setLoading(true);
     try {
       for (let p of pessoas) {
@@ -54,7 +73,8 @@ export default function Confirmar() {
         });
       }
       setMsg("✅ Presença(s) confirmada(s) com sucesso!");
-      setPessoas(Array(quantidade).fill({ nome: "", telefone: "", idade: "" }));
+      setPessoas([]);
+      setQuantidade(""); // limpa o campo após confirmar
     } catch (err) {
       setMsg("❌ Erro ao confirmar: " + err.message);
     }
@@ -98,7 +118,6 @@ export default function Confirmar() {
           <label className="block mb-1 font-medium">Quantas pessoas irão?</label>
           <input
             type="number"
-            min="1"
             value={quantidade}
             onChange={handleQuantidadeChange}
             className="w-full p-2 border rounded"
